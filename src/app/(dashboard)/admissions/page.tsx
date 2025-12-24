@@ -6,7 +6,13 @@ import { supabase } from '@/lib/supabase'
 import { Admission } from '@/types/database'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Card } from '@/components/ui/card'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 
@@ -76,16 +82,17 @@ export default function AdmissionsPage() {
             />
           </div>
           <div className="w-48">
-            <Select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              options={[
-                { value: '', label: 'All Status' },
-                { value: 'Active', label: 'Active' },
-                { value: 'Discharged', label: 'Discharged' },
-                { value: 'LAMA', label: 'LAMA' },
-              ]}
-            />
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Status</SelectItem>
+                <SelectItem value="Active">Active</SelectItem>
+                <SelectItem value="Discharged">Discharged</SelectItem>
+                <SelectItem value="LAMA">LAMA</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

@@ -6,7 +6,13 @@ import { supabase } from '@/lib/supabase'
 import { ExpenseCategory } from '@/types/database'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Card } from '@/components/ui/card'
 
 export default function NewExpensePage() {
@@ -72,14 +78,19 @@ export default function NewExpensePage() {
 
       <Card className="max-w-xl">
         <form onSubmit={handleSubmit}>
-          <Select
-            id="category_id"
-            label="Category *"
-            value={formData.category_id}
-            onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-            options={categories.map(c => ({ value: c.id, label: c.name }))}
-            required
-          />
+          <div>
+            <label htmlFor="category_id" className="block text-sm font-medium mb-2">Category *</label>
+            <Select value={formData.category_id} onValueChange={(value) => setFormData({ ...formData, category_id: value })} required>
+              <SelectTrigger>
+                <SelectValue placeholder="Select category..." />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <Input
             id="description"
@@ -111,19 +122,21 @@ export default function NewExpensePage() {
             />
           </div>
 
-          <Select
-            id="payment_mode"
-            label="Payment Mode"
-            value={formData.payment_mode}
-            onChange={(e) => setFormData({ ...formData, payment_mode: e.target.value })}
-            options={[
-              { value: 'Cash', label: 'Cash' },
-              { value: 'UPI', label: 'UPI' },
-              { value: 'Bank Transfer', label: 'Bank Transfer' },
-              { value: 'Cheque', label: 'Cheque' },
-              { value: 'Card', label: 'Card' },
-            ]}
-          />
+          <div>
+            <label htmlFor="payment_mode" className="block text-sm font-medium mb-2">Payment Mode</label>
+            <Select value={formData.payment_mode} onValueChange={(value) => setFormData({ ...formData, payment_mode: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select payment mode..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Cash">Cash</SelectItem>
+                <SelectItem value="UPI">UPI</SelectItem>
+                <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                <SelectItem value="Cheque">Cheque</SelectItem>
+                <SelectItem value="Card">Card</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           <Input
             id="vendor_name"

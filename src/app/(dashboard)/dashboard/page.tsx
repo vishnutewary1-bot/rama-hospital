@@ -2,30 +2,34 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
-import { StatCard, Card } from '@/components/ui/card'
+import { dashboardService } from '@/lib/database'
+import { StatCard, Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-
-interface DashboardStats {
-  activePatients: number
-  todayAdmissions: number
-  todayCollection: number
-  pendingAmount: number
-  totalDoctors: number
-  todayExpenses: number
-}
+import { Badge } from '@/components/ui/badge'
+import { DashboardStats } from '@/types/database'
+import { formatCurrency } from '@/lib/utils'
+import {
+  Users,
+  UserPlus,
+  Receipt,
+  DollarSign,
+  Stethoscope,
+  BedDouble,
+  FlaskConical,
+  Clock,
+  TrendingUp,
+  TrendingDown,
+  Activity,
+  Loader2,
+  Plus,
+  FileText,
+  BarChart3
+} from 'lucide-react'
 
 export default function DashboardPage() {
-  const { profile } = useAuth()
-  const [stats, setStats] = useState<DashboardStats>({
-    activePatients: 0,
-    todayAdmissions: 0,
-    todayCollection: 0,
-    pendingAmount: 0,
-    totalDoctors: 0,
-    todayExpenses: 0,
-  })
+  const { user } = useAuth()
+  const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -34,64 +38,8 @@ export default function DashboardPage() {
 
   async function fetchStats() {
     try {
-      const today = new Date().toISOString().split('T')[0]
-
-      // Active admissions
-      const { count: activePatients } = await supabase
-        .from('admissions')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'Active')
-
-      // Today's admissions
-      const { count: todayAdmissions } = await supabase
-        .from('admissions')
-        .select('*', { count: 'exact', head: true })
-        .gte('admission_date', today)
-
-      // Today's collection
-      const { data: todayPayments } = await supabase
-        .from('payments')
-        .select('amount')
-        .gte('payment_date', today)
-
-      const todayCollection = todayPayments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0
-
-      // Pending amount
-      const { data: pendingBills } = await supabase
-        .from('bills')
-        .select('net_amount, amount_received')
-        .in('status', ['Draft', 'Partial'])
-
-      const pendingAmount = pendingBills?.reduce(
-        (sum, b) => sum + (Number(b.net_amount) - Number(b.amount_received)),
-        0
-      ) || 0
-
-      // Total doctors
-      const { count: totalDoctors } = await supabase
-        .from('doctors')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_active', true)
-
-      // Today's expenses (admin only)
-      let todayExpenses = 0
-      if (profile?.role === 'admin') {
-        const { data: expenses } = await supabase
-          .from('expenses')
-          .select('amount')
-          .eq('expense_date', today)
-
-        todayExpenses = expenses?.reduce((sum, e) => sum + Number(e.amount), 0) || 0
-      }
-
-      setStats({
-        activePatients: activePatients || 0,
-        todayAdmissions: todayAdmissions || 0,
-        todayCollection,
-        pendingAmount,
-        totalDoctors: totalDoctors || 0,
-        todayExpenses,
-      })
+      const data = await dashboardService.getStats()
+      setStats(data)
     } catch (error) {
       console.error('Error fetching stats:', error)
     } finally {
@@ -100,79 +48,272 @@ export default function DashboardPage() {
   }
 
   if (loading) {
-    return <div className="text-center py-8">Loading dashboard...</div>
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    )
   }
 
+  const isAdmin = user?.role === 'admin'
+  const isWorker = user?.role === 'worker'
+  const isBilling = user?.role === 'billing'
+  const isPathology = user?.role === 'pathology'
+  const isDoctor = user?.role === 'doctor'
+
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Dashboard</h1>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-500">Welcome back! Here&apos;s what&apos;s happening today.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-sm">
+            <Clock className="h-3 w-3 mr-1" />
+            {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })}
+          </Badge>
+        </div>
+      </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          title="Active Patients"
-          value={stats.activePatients}
+          title="Total Patients"
+          value={stats?.totalPatients || 0}
+          icon={<Users className="h-6 w-6" />}
           color="blue"
         />
         <StatCard
-          title="Today's Admissions"
-          value={stats.todayAdmissions}
+          title="Active Admissions"
+          value={stats?.activeAdmissions || 0}
+          icon={<UserPlus className="h-6 w-6" />}
           color="green"
         />
         <StatCard
           title="Today's Collection"
-          value={`₹ ${stats.todayCollection.toLocaleString()}`}
+          value={formatCurrency(stats?.todayCollection || 0)}
+          icon={<TrendingUp className="h-6 w-6" />}
           color="green"
         />
         <StatCard
           title="Pending Amount"
-          value={`₹ ${stats.pendingAmount.toLocaleString()}`}
+          value={formatCurrency(stats?.pendingAmount || 0)}
+          icon={<TrendingDown className="h-6 w-6" />}
           color="yellow"
         />
+      </div>
+
+      {/* Second Row Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          title="Total Doctors"
-          value={stats.totalDoctors}
+          title="Available Beds"
+          value={stats?.availableBeds || 0}
+          icon={<BedDouble className="h-6 w-6" />}
+          color="green"
+        />
+        <StatCard
+          title="Occupied Beds"
+          value={stats?.occupiedBeds || 0}
+          icon={<BedDouble className="h-6 w-6" />}
+          color="red"
+        />
+        <StatCard
+          title="Pending Lab Tests"
+          value={stats?.pendingTests || 0}
+          icon={<FlaskConical className="h-6 w-6" />}
           color="purple"
         />
-        {profile?.role === 'admin' && (
+        {isAdmin && (
           <StatCard
             title="Today's Expenses"
-            value={`₹ ${stats.todayExpenses.toLocaleString()}`}
+            value={formatCurrency(stats?.todayExpenses || 0)}
+            icon={<DollarSign className="h-6 w-6" />}
             color="red"
+          />
+        )}
+        {!isAdmin && (
+          <StatCard
+            title="Total Doctors"
+            value={stats?.totalDoctors || 0}
+            icon={<Stethoscope className="h-6 w-6" />}
+            color="indigo"
           />
         )}
       </div>
 
-      {/* Quick Actions */}
-      <Card title="Quick Actions">
-        <div className="flex flex-wrap gap-4">
-          {(profile?.role === 'admin' || profile?.role === 'worker') && (
-            <>
-              <Link href="/patients/new">
-                <Button size="lg">+ New Patient</Button>
+      {/* Quick Actions & Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Quick Actions */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Quick Actions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {(isAdmin || isWorker) && (
+                <>
+                  <Link href="/patients/new" className="block">
+                    <Button variant="outline" className="w-full h-24 flex-col gap-2">
+                      <Users className="h-6 w-6" />
+                      <span className="text-sm">New Patient</span>
+                    </Button>
+                  </Link>
+                  <Link href="/admissions/new" className="block">
+                    <Button variant="outline" className="w-full h-24 flex-col gap-2">
+                      <UserPlus className="h-6 w-6" />
+                      <span className="text-sm">New Admission</span>
+                    </Button>
+                  </Link>
+                </>
+              )}
+              {(isAdmin || isWorker || isBilling) && (
+                <Link href="/billing" className="block">
+                  <Button variant="outline" className="w-full h-24 flex-col gap-2">
+                    <Receipt className="h-6 w-6" />
+                    <span className="text-sm">Billing</span>
+                  </Button>
+                </Link>
+              )}
+              {(isAdmin || isPathology) && (
+                <Link href="/pathology/new" className="block">
+                  <Button variant="outline" className="w-full h-24 flex-col gap-2">
+                    <FlaskConical className="h-6 w-6" />
+                    <span className="text-sm">Order Lab Test</span>
+                  </Button>
+                </Link>
+              )}
+              {(isAdmin || isDoctor) && (
+                <Link href="/medical-records" className="block">
+                  <Button variant="outline" className="w-full h-24 flex-col gap-2">
+                    <FileText className="h-6 w-6" />
+                    <span className="text-sm">Medical Records</span>
+                  </Button>
+                </Link>
+              )}
+              {isAdmin && (
+                <>
+                  <Link href="/expenses/new" className="block">
+                    <Button variant="outline" className="w-full h-24 flex-col gap-2">
+                      <DollarSign className="h-6 w-6" />
+                      <span className="text-sm">Add Expense</span>
+                    </Button>
+                  </Link>
+                  <Link href="/reports" className="block">
+                    <Button variant="outline" className="w-full h-24 flex-col gap-2">
+                      <BarChart3 className="h-6 w-6" />
+                      <span className="text-sm">Reports</span>
+                    </Button>
+                  </Link>
+                  <Link href="/users/new" className="block">
+                    <Button variant="outline" className="w-full h-24 flex-col gap-2">
+                      <Plus className="h-6 w-6" />
+                      <span className="text-sm">Add User</span>
+                    </Button>
+                  </Link>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Today's Summary */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Today&apos;s Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between py-2 border-b">
+                <span className="text-gray-600">New Admissions</span>
+                <span className="font-semibold">{stats?.todayAdmissions || 0}</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b">
+                <span className="text-gray-600">Active Patients</span>
+                <span className="font-semibold">{stats?.activeAdmissions || 0}</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b">
+                <span className="text-gray-600">Collection</span>
+                <span className="font-semibold text-green-600">
+                  {formatCurrency(stats?.todayCollection || 0)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b">
+                <span className="text-gray-600">Pending Tests</span>
+                <span className="font-semibold text-yellow-600">{stats?.pendingTests || 0}</span>
+              </div>
+              {isAdmin && (
+                <div className="flex items-center justify-between py-2">
+                  <span className="text-gray-600">Expenses</span>
+                  <span className="font-semibold text-red-600">
+                    {formatCurrency(stats?.todayExpenses || 0)}
+                  </span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Bed Occupancy Overview */}
+      {(isAdmin || isWorker) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BedDouble className="h-5 w-5" />
+              Bed Occupancy Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-8">
+              <div className="flex-1">
+                <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-blue-600 transition-all duration-500"
+                    style={{
+                      width: `${stats && (stats.availableBeds + stats.occupiedBeds) > 0
+                        ? (stats.occupiedBeds / (stats.availableBeds + stats.occupiedBeds)) * 100
+                        : 0}%`
+                    }}
+                  />
+                </div>
+                <div className="flex justify-between mt-2 text-sm text-gray-600">
+                  <span>
+                    {stats && (stats.availableBeds + stats.occupiedBeds) > 0
+                      ? Math.round((stats.occupiedBeds / (stats.availableBeds + stats.occupiedBeds)) * 100)
+                      : 0}% Occupied
+                  </span>
+                  <span>{(stats?.availableBeds || 0) + (stats?.occupiedBeds || 0)} Total Beds</span>
+                </div>
+              </div>
+              <div className="flex gap-6">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-green-600">{stats?.availableBeds || 0}</p>
+                  <p className="text-sm text-gray-500">Available</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-red-600">{stats?.occupiedBeds || 0}</p>
+                  <p className="text-sm text-gray-500">Occupied</p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4">
+              <Link href="/wards">
+                <Button variant="outline" size="sm">
+                  View Ward Details
+                </Button>
               </Link>
-              <Link href="/admissions/new">
-                <Button size="lg" variant="success">+ New Admission</Button>
-              </Link>
-            </>
-          )}
-          {(profile?.role === 'admin' || profile?.role === 'worker' || profile?.role === 'billing') && (
-            <Link href="/billing">
-              <Button size="lg" variant="secondary">View Bills</Button>
-            </Link>
-          )}
-          {profile?.role === 'admin' && (
-            <>
-              <Link href="/users/new">
-                <Button size="lg" variant="outline">+ Add User</Button>
-              </Link>
-              <Link href="/expenses/new">
-                <Button size="lg" variant="danger">+ Add Expense</Button>
-              </Link>
-            </>
-          )}
-        </div>
-      </Card>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

@@ -102,7 +102,7 @@ export default function DoctorsPage() {
                   <TableCell>
                     <Button
                       size="sm"
-                      variant={doctor.is_active ? 'danger' : 'success'}
+                      variant={doctor.is_active ? 'destructive' : 'default'}
                       onClick={() => toggleDoctorStatus(doctor.id, doctor.is_active)}
                     >
                       {doctor.is_active ? 'Deactivate' : 'Activate'}

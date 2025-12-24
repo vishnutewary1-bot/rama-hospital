@@ -1,78 +1,108 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
-import { User as SupabaseUser } from '@supabase/supabase-js'
-import { supabase } from './supabase'
+import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { User } from '@/types/database'
+import { userService } from './database'
+import * as bcrypt from 'bcryptjs'
 
 interface AuthContextType {
-  user: SupabaseUser | null
-  profile: User | null
+  user: User | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+const SESSION_KEY = 'auth_session'
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<SupabaseUser | null>(null)
-  const [profile, setProfile] = useState<User | null>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        fetchProfile(session.user.id)
-      } else {
-        setLoading(false)
+  const loadSession = useCallback(async () => {
+    try {
+      const sessionData = localStorage.getItem(SESSION_KEY)
+      if (sessionData) {
+        const session = JSON.parse(sessionData)
+        if (session.userId && session.expiresAt > Date.now()) {
+          // Get fresh user data
+          const userData = await userService.getById(session.userId)
+          if (userData && userData.is_active) {
+            setUser(userData)
+          } else {
+            // Clear invalid session
+            localStorage.removeItem(SESSION_KEY)
+          }
+        } else {
+          // Clear expired session
+          localStorage.removeItem(SESSION_KEY)
+        }
       }
-    })
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        fetchProfile(session.user.id)
-      } else {
-        setProfile(null)
-        setLoading(false)
-      }
-    })
-
-    return () => subscription.unsubscribe()
+    } catch (error) {
+      console.error('Error loading session:', error)
+      localStorage.removeItem(SESSION_KEY)
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
-  async function fetchProfile(userId: string) {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single()
+  useEffect(() => {
+    loadSession()
+  }, [loadSession])
 
-    if (error) {
-      console.error('Error fetching profile:', error)
-    } else {
-      setProfile(data)
+  async function signIn(email: string, password: string): Promise<{ error: Error | null }> {
+    try {
+      // Get user by email
+      const userData = await userService.getByEmail(email)
+
+      if (!userData) {
+        return { error: new Error('Invalid email or password') }
+      }
+
+      if (!userData.is_active) {
+        return { error: new Error('Account is inactive') }
+      }
+
+      // Verify password
+      const passwordMatch = await bcrypt.compare(password, (userData as any).password)
+
+      if (!passwordMatch) {
+        return { error: new Error('Invalid email or password') }
+      }
+
+      // Create session (expires in 30 days)
+      const session = {
+        userId: userData.id,
+        expiresAt: Date.now() + (30 * 24 * 60 * 60 * 1000)
+      }
+
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+      setUser(userData)
+
+      return { error: null }
+    } catch (error) {
+      console.error('Login error:', error)
+      return { error: error instanceof Error ? error : new Error('Login failed') }
     }
-    setLoading(false)
   }
 
-  async function signIn(email: string, password: string) {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    return { error }
+  async function signOut(): Promise<void> {
+    try {
+      localStorage.removeItem(SESSION_KEY)
+      setUser(null)
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
   }
 
-  async function signOut() {
-    await supabase.auth.signOut()
-    setUser(null)
-    setProfile(null)
+  async function refreshUser(): Promise<void> {
+    await loadSession()
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signOut, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )
@@ -84,4 +114,18 @@ export function useAuth() {
     throw new Error('useAuth must be used within an AuthProvider')
   }
   return context
+}
+
+// Helper hook to check user role
+export function useHasRole(roles: string | string[]): boolean {
+  const { user } = useAuth()
+  if (!user) return false
+
+  const roleArray = Array.isArray(roles) ? roles : [roles]
+  return roleArray.includes(user.role)
+}
+
+// Helper hook to check if user is admin
+export function useIsAdmin(): boolean {
+  return useHasRole('admin')
 }

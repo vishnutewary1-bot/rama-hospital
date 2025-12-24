@@ -5,7 +5,13 @@ import { supabase } from '@/lib/supabase'
 import { ServiceCategory, Service } from '@/types/database'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Card } from '@/components/ui/card'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { Modal } from '@/components/ui/modal'
@@ -102,13 +108,17 @@ export default function ServicesPage() {
 
       <Card>
         <div className="mb-4">
-          <Select
-            id="category"
-            label="Select Category"
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            options={categories.map(c => ({ value: c.id, label: c.name }))}
-          />
+          <label htmlFor="category" className="block text-sm font-medium mb-2">Select Category</label>
+          <Select value={selectedCategory} onValueChange={(value) => setSelectedCategory(value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select category..." />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map(c => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <Table>
@@ -156,7 +166,7 @@ export default function ServicesPage() {
                       </Button>
                       <Button
                         size="sm"
-                        variant={service.is_active ? 'danger' : 'success'}
+                        variant={service.is_active ? 'destructive' : 'default'}
                         onClick={() => toggleServiceStatus(service.id, service.is_active)}
                       >
                         {service.is_active ? 'Disable' : 'Enable'}

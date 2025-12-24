@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { Sidebar } from '@/components/dashboard/sidebar'
 import { Header } from '@/components/dashboard/header'
+import { StatusBar } from '@/components/dashboard/status-bar'
+import { Toaster } from '@/components/ui/toaster'
+import { Loader2 } from 'lucide-react'
 
 export default function DashboardLayout({
   children,
@@ -22,8 +25,11 @@ export default function DashboardLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-lg text-gray-600">Loading...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <p className="text-sm text-gray-600">Loading...</p>
+        </div>
       </div>
     )
   }
@@ -37,10 +43,12 @@ export default function DashboardLayout({
       <Sidebar />
       <div className="flex-1 flex flex-col">
         <Header />
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-6 pb-12 overflow-auto">
           {children}
         </main>
+        <StatusBar />
       </div>
+      <Toaster />
     </div>
   )
 }

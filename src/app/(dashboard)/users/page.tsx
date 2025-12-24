@@ -111,7 +111,7 @@ export default function UsersPage() {
                   <TableCell>
                     <Button
                       size="sm"
-                      variant={user.is_active ? 'danger' : 'success'}
+                      variant={user.is_active ? 'destructive' : 'default'}
                       onClick={() => toggleUserStatus(user.id, user.is_active)}
                     >
                       {user.is_active ? 'Deactivate' : 'Activate'}

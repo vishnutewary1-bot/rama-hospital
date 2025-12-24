@@ -6,7 +6,13 @@ import { supabase } from '@/lib/supabase'
 import { Area, Referral } from '@/types/database'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Card } from '@/components/ui/card'
 
 export default function NewPatientPage() {
@@ -100,18 +106,19 @@ export default function NewPatientPage() {
               required
             />
 
-            <Select
-              id="gender"
-              label="Gender *"
-              value={formData.gender}
-              onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-              options={[
-                { value: 'Male', label: 'Male' },
-                { value: 'Female', label: 'Female' },
-                { value: 'Other', label: 'Other' },
-              ]}
-              required
-            />
+            <div>
+              <label htmlFor="gender" className="block text-sm font-medium mb-2">Gender *</label>
+              <Select value={formData.gender} onValueChange={(value) => setFormData({ ...formData, gender: value })} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select gender..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Male">Male</SelectItem>
+                  <SelectItem value="Female">Female</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <Input
@@ -142,38 +149,52 @@ export default function NewPatientPage() {
             onChange={(e) => setFormData({ ...formData, address: e.target.value })}
           />
 
-          <Select
-            id="area_id"
-            label="Area"
-            value={formData.area_id}
-            onChange={(e) => setFormData({ ...formData, area_id: e.target.value })}
-            options={areas.map((a) => ({ value: a.id, label: a.name }))}
-          />
+          <div>
+            <label htmlFor="area_id" className="block text-sm font-medium mb-2">Area</label>
+            <Select value={formData.area_id} onValueChange={(value) => setFormData({ ...formData, area_id: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select area..." />
+              </SelectTrigger>
+              <SelectContent>
+                {areas.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          <Select
-            id="referral_id"
-            label="Referral Source"
-            value={formData.referral_id}
-            onChange={(e) => setFormData({ ...formData, referral_id: e.target.value })}
-            options={referrals.map((r) => ({ value: r.id, label: r.name }))}
-          />
+          <div>
+            <label htmlFor="referral_id" className="block text-sm font-medium mb-2">Referral Source</label>
+            <Select value={formData.referral_id} onValueChange={(value) => setFormData({ ...formData, referral_id: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select referral source..." />
+              </SelectTrigger>
+              <SelectContent>
+                {referrals.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          <Select
-            id="blood_group"
-            label="Blood Group"
-            value={formData.blood_group}
-            onChange={(e) => setFormData({ ...formData, blood_group: e.target.value })}
-            options={[
-              { value: 'A+', label: 'A+' },
-              { value: 'A-', label: 'A-' },
-              { value: 'B+', label: 'B+' },
-              { value: 'B-', label: 'B-' },
-              { value: 'O+', label: 'O+' },
-              { value: 'O-', label: 'O-' },
-              { value: 'AB+', label: 'AB+' },
-              { value: 'AB-', label: 'AB-' },
-            ]}
-          />
+          <div>
+            <label htmlFor="blood_group" className="block text-sm font-medium mb-2">Blood Group</label>
+            <Select value={formData.blood_group} onValueChange={(value) => setFormData({ ...formData, blood_group: value })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select blood group..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="A+">A+</SelectItem>
+                <SelectItem value="A-">A-</SelectItem>
+                <SelectItem value="B+">B+</SelectItem>
+                <SelectItem value="B-">B-</SelectItem>
+                <SelectItem value="O+">O+</SelectItem>
+                <SelectItem value="O-">O-</SelectItem>
+                <SelectItem value="AB+">AB+</SelectItem>
+                <SelectItem value="AB-">AB-</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           {error && (
             <div className="bg-red-50 text-red-600 p-3 rounded mb-4">
