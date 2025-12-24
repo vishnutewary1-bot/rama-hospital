@@ -11,6 +11,8 @@ export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json()
 
+    console.log('[LOGIN] Attempt for email:', email)
+
     if (!email || !password) {
       return NextResponse.json(
         { error: 'Email and password are required' },
@@ -25,7 +27,15 @@ export async function POST(request: NextRequest) {
       .eq('email', email)
       .single()
 
+    console.log('[LOGIN] User fetch result:', {
+      found: !!user,
+      error: error?.message,
+      hasPasswordHash: user?.password_hash ? 'yes' : 'no',
+      passwordHashLength: user?.password_hash?.length
+    })
+
     if (error || !user) {
+      console.log('[LOGIN] User not found or error:', error?.message)
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
@@ -34,6 +44,7 @@ export async function POST(request: NextRequest) {
 
     // Check if user is active
     if (!user.is_active) {
+      console.log('[LOGIN] User is inactive')
       return NextResponse.json(
         { error: 'Account is inactive. Please contact administrator.' },
         { status: 403 }
@@ -41,14 +52,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify password
+    console.log('[LOGIN] Verifying password...')
     const isValidPassword = await bcrypt.compare(password, user.password_hash)
+    console.log('[LOGIN] Password valid:', isValidPassword)
 
     if (!isValidPassword) {
+      console.log('[LOGIN] Password verification failed')
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
       )
     }
+
+    console.log('[LOGIN] Login successful for user:', user.email)
 
     // Update last login
     await supabase
