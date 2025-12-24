@@ -1,11 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import bcrypt from 'bcryptjs'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! // Use service role key for server-side
-)
+import { authService } from '@/lib/auth-service'
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,66 +14,30 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Fetch user by email
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .single()
+    // Authenticate using the auth service (tries Supabase first, falls back to local)
+    const result = await authService.authenticate(email, password)
 
-    console.log('[LOGIN] User fetch result:', {
-      found: !!user,
-      error: error?.message,
-      hasPasswordHash: user?.password_hash ? 'yes' : 'no',
-      passwordHashLength: user?.password_hash?.length
-    })
-
-    if (error || !user) {
-      console.log('[LOGIN] User not found or error:', error?.message)
+    if ('error' in result) {
+      console.log('[LOGIN] Authentication failed:', result.error)
       return NextResponse.json(
-        { error: 'Invalid credentials' },
+        { error: 'Invalid email or password' },
         { status: 401 }
       )
     }
 
-    // Check if user is active
-    if (!user.is_active) {
-      console.log('[LOGIN] User is inactive')
-      return NextResponse.json(
-        { error: 'Account is inactive. Please contact administrator.' },
-        { status: 403 }
-      )
-    }
-
-    // Verify password
-    console.log('[LOGIN] Verifying password...')
-    const isValidPassword = await bcrypt.compare(password, user.password_hash)
-    console.log('[LOGIN] Password valid:', isValidPassword)
-
-    if (!isValidPassword) {
-      console.log('[LOGIN] Password verification failed')
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      )
-    }
-
+    const { user } = result
     console.log('[LOGIN] Login successful for user:', user.email)
-
-    // Update last login
-    await supabase
-      .from('users')
-      .update({ last_login: new Date().toISOString() })
-      .eq('id', user.id)
 
     // Remove password from response
     const { password_hash, ...userWithoutPassword } = user
 
-    // Create session token (you can implement JWT here)
+    // Create session token
     const session = {
       user: userWithoutPassword,
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
     }
+
+    console.log('[LOGIN] Session created successfully')
 
     return NextResponse.json({
       success: true,
@@ -87,7 +45,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Login error:', error)
+    console.error('[LOGIN] Error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
