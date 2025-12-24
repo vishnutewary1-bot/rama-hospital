@@ -21,7 +21,7 @@ export interface User {
 const DEFAULT_ADMIN: User = {
   id: '00000000-0000-0000-0000-000000000001',
   email: 'admin@ramahospital.com',
-  password_hash: '$2a$10$7nXhVE5QqP5m7H2.hJX8aOqKfPXs3vqWQH8SJ5KpT6jYXMqVdP3K2', // Admin@123
+  password_hash: '$2a$10$MGEWbWsAjJTVXbgC5MNceOV2vfEryMmi89hYt1nlVMCv1gSBkmE3C', // Admin@123
   full_name: 'System Administrator',
   role: 'admin',
   is_active: true,
@@ -35,7 +35,7 @@ const DEFAULT_USERS: User[] = [
   {
     id: '00000000-0000-0000-0000-000000000002',
     email: 'doctor@ramahospital.com',
-    password_hash: '$2a$10$7nXhVE5QqP5m7H2.hJX8aOqKfPXs3vqWQH8SJ5KpT6jYXMqVdP3K2', // Admin@123
+    password_hash: '$2a$10$MGEWbWsAjJTVXbgC5MNceOV2vfEryMmi89hYt1nlVMCv1gSBkmE3C', // Admin@123
     full_name: 'Dr. John Smith',
     role: 'doctor',
     is_active: true,
@@ -45,7 +45,7 @@ const DEFAULT_USERS: User[] = [
   {
     id: '00000000-0000-0000-0000-000000000003',
     email: 'worker@ramahospital.com',
-    password_hash: '$2a$10$7nXhVE5QqP5m7H2.hJX8aOqKfPXs3vqWQH8SJ5KpT6jYXMqVdP3K2', // Admin@123
+    password_hash: '$2a$10$MGEWbWsAjJTVXbgC5MNceOV2vfEryMmi89hYt1nlVMCv1gSBkmE3C', // Admin@123
     full_name: 'Staff Member',
     role: 'worker',
     is_active: true,
